@@ -1,0 +1,13 @@
+# face-match-tool 依赖清单
+# 你的机器已安装大部分，用 pip install -r requirements.txt 补全即可
+
+opencv-python>=4.8          # 图像解码与视频抽帧（你已装 5.0）
+numpy>=1.24                 # 已装
+insightface>=0.7.3          # 人脸检测 RetinaFace + 特征提取 ArcFace（你已装 2.1）
+onnxruntime>=1.15           # CPU 推理后端（你已装 1.31）
+Pillow>=9.5                 # EXIF 时间与方向读取（已装）
+PyYAML>=6.0                 # 配置解析（已装）
+tqdm>=4.65                  # 进度条（已装）
+
+# 可选：让 iPhone 默认的 HEIC/HEIF 照片也能处理
+# pillow-heif>=0.13

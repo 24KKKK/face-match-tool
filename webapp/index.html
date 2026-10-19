@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>相册识别归档工具</title>
+<!-- 内联图标，省掉一次 favicon.ico 的 404 请求 -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='13' r='7' fill='%23185FA5'/%3E%3Ccircle cx='13' cy='12' r='1.4' fill='%23fff'/%3E%3Ccircle cx='19' cy='12' r='1.4' fill='%23fff'/%3E%3Cpath d='M11 19c1.5 2 4.5 2.6 7 1.4' stroke='%23fff' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3Crect x='5' y='23' width='22' height='6' rx='2' fill='%230C447C'/%3E%3C/svg%3E">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    background: #F5F5F4; color: #1C1C1A; font-size: 13px; line-height: 1.6;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 20px 60px; }
+  header { margin-bottom: 20px; }
+  h1 { font-size: 19px; font-weight: 500; margin: 0 0 4px; }
+  .sub { color: #6B6B66; font-size: 12px; }
+
+  .card {
+    background: #FFFFFF; border: 1px solid #E5E4E1; border-radius: 10px;
+    padding: 16px 18px; margin-bottom: 14px;
+  }
+  .card h2 {
+    font-size: 14px; font-weight: 500; margin: 0 0 14px; padding-bottom: 10px;
+    border-bottom: 1px solid #EFEEEB;
+  }
+  .row { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
+  .row:last-child { margin-bottom: 0; }
+  .label { width: 116px; flex: none; color: #4A4A45; }
+  .label .hint { display: block; font-size: 11px; color: #8A8A82; line-height: 1.4; }
+  input[type=text] {
+    flex: 1; min-width: 0; padding: 6px 9px; font-size: 13px;
+    border: 1px solid #D5D4CF; border-radius: 6px; background: #fff; color: #1C1C1A;
+    font-family: inherit;
+  }
+  input[type=text]:focus { outline: none; border-color: #378ADD; }
+  input[type=number] { width: 82px; padding: 6px 8px; font-size: 13px;
+    border: 1px solid #D5D4CF; border-radius: 6px; font-family: inherit; }
+  select { padding: 6px 8px; font-size: 13px; border: 1px solid #D5D4CF;
+    border-radius: 6px; background: #fff; font-family: inherit; }
+  input[type=range] { flex: 1; min-width: 0; accent-color: #185FA5; }
+  .rangetxt { width: 92px; flex: none; font-variant-numeric: tabular-nums; color: #185FA5; }
+
+  button {
+    padding: 6px 14px; font-size: 13px; border-radius: 6px; cursor: pointer;
+    border: 1px solid #C9C8C2; background: #fff; color: #1C1C1A; font-family: inherit;
+  }
+  button:hover { background: #F2F1EE; }
+  button.primary { background: #185FA5; border-color: #185FA5; color: #fff; }
+  button.primary:hover { background: #0C447C; }
+  button.danger { color: #A32D2D; border-color: #E8B4B4; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .btnrow { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; }
+
+  .note { background: #E6F1FB; border: 1px solid #B5D4F4; border-radius: 7px;
+    padding: 9px 12px; color: #0C447C; font-size: 12px; margin-top: 11px; }
+  .warn { background: #FAEEDA; border-color: #FAC775; color: #633806; }
+
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 0 22px; }
+
+  /* 日志 */
+  .logbox {
+    background: #FAFAF9; border: 1px solid #E5E4E1; border-radius: 8px;
+    padding: 10px 12px; height: 268px; overflow-y: auto;
+    font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+    font-size: 12px; line-height: 1.65; white-space: pre-wrap; word-break: break-all;
+  }
+  .logbox .t { color: #A0A09A; }
+  .bar { height: 6px; background: #EDEDEA; border-radius: 3px; overflow: hidden; margin: 10px 0 4px; }
+  .bar > div { height: 100%; background: #185FA5; width: 0%; transition: width .3s; }
+  .stat { font-size: 12px; color: #6B6B66; font-variant-numeric: tabular-nums; }
+
+  /* 结果 */
+  .hist { display: grid; gap: 3px; }
+  .histrow { display: grid; grid-template-columns: 58px 1fr 52px; gap: 9px; align-items: center; font-size: 12px; }
+  .histrow .fill { height: 13px; background: #378ADD; border-radius: 2px; min-width: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #EFEEEB; }
+  th { color: #6B6B66; font-weight: 500; }
+  td.name { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* 清单可能很长，限制高度让卡片不被撑破；表头吸顶方便滚动时对照列含义 */
+  .tblwrap { max-height: 330px; overflow-y: auto; margin-top: 13px;
+    border: 1px solid #EFEEEB; border-radius: 7px; }
+  .tblwrap th { position: sticky; top: 0; background: #FBFAF9; z-index: 1;
+    box-shadow: 0 1px 0 #EFEEEB; }
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px;
+    background: #EEEDFE; color: #3C3489; }
+
+  /* 目录选择器 */
+  .mask { position: absolute; inset: 0; background: rgba(0,0,0,.32); display: none;
+    align-items: center; justify-content: center; z-index: 50; }
+  .mask.on { display: flex; }
+  .modal { background: #fff; border-radius: 11px; width: 560px; max-width: 92vw;
+    max-height: 78vh; display: flex; flex-direction: column; }
+  .modal header { padding: 13px 16px; border-bottom: 1px solid #EFEEEB;
+    font-size: 14px; font-weight: 500; margin: 0; }
+  .crumb { padding: 9px 16px; font-size: 12px; color: #185FA5; word-break: break-all;
+    border-bottom: 1px solid #EFEEEB; background: #FAFAF9; cursor: default; }
+  .dirlist { flex: 1; overflow-y: auto; padding: 6px 0; min-height: 200px; }
+  .item { padding: 6px 16px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
+  .item:hover { background: #E6F1FB; }
+  .arrow { color: #8A8A82; font-size: 11px; }
+  .empty { padding: 22px; text-align: center; color: #8A8A82; font-size: 12px; }
+  .modal footer { padding: 11px 16px; border-top: 1px solid #EFEEEB;
+    display: flex; gap: 9px; justify-content: flex-end; align-items: center; }
+  .modal footer .row { flex: 1; margin: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>相册识别归档工具</h1>
+  <div class="sub">从照片与视频中找出指定孩子，按相似度分档归档并按拍摄时间重命名</div>
+</header>
+
+<div class="card">
+  <h2>目录设置</h2>
+  <div class="row">
+    <div class="label">参考样本<span class="hint">目标孩子的照片视频</span></div>
+    <input type="text" id="p-ref" data-key="paths.reference_dir" placeholder="选择包含该孩子清晰正面照片的目录">
+    <button data-pick="p-ref">选择</button>
+  </div>
+  <div class="row">
+    <div class="label">待整理相册<span class="hint">要检索的全部照片视频</span></div>
+    <input type="text" id="p-src" data-key="paths.source_dir" placeholder="选择待整理的目录">
+    <button data-pick="p-src">选择</button>
+  </div>
+  <div class="row">
+    <div class="label">输出目录<span class="hint">归档结果存放位置</span></div>
+    <input type="text" id="p-out" data-key="paths.output_dir" placeholder="建议与待整理相册在同一磁盘分区">
+    <button data-pick="p-out">选择</button>
+  </div>
+  <div class="note">
+    输出目录建议放在与待整理相册<span style="font-weight:500">相同的磁盘分区</span>，这样归档可以用硬链接，不额外占用磁盘空间；跨分区会自动改为完整复制。
+  </div>
+</div>
+
+<div class="card">
+  <h2>识别参数</h2>
+  <div class="row">
+    <div class="label">配置来源<span class="hint">改动 config.yaml 后点此同步</span></div>
+    <div id="cfg-state" style="flex:1;font-size:12px;color:#8A8A82"></div>
+    <button id="btn-reload">重新载入</button>
+  </div>
+  <div class="grid2">
+    <div>
+      <div class="row">
+        <div class="label">检测精度<span class="hint">合照小脸选精细</span></div>
+        <select data-key="model.det_size" data-kind="size">
+          <option value="320">快速（320）</option>
+          <option value="480">标准（480）</option>
+          <option value="640" selected>均衡（640）</option>
+          <option value="768">精细（768）</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="label">并行进程<span class="hint">实测 3 个最快，不是越多越好</span></div>
+        <input type="number" min="1" max="12" data-key="runtime.workers" value="3">
+      </div>
+      <div class="row">
+        <div class="label">每进程推理线程<span class="hint">0 = 不限</span></div>
+        <input type="number" min="0" max="12" data-key="model.intra_op_num_threads" value="2">
+      </div>
+    </div>
+    <div>
+      <div class="row">
+        <div class="label">视频抽帧间隔</div>
+        <input type="range" min="100" max="5000" step="100" value="2000"
+               data-key="scan.video.frame_interval_ms" data-fmt="ms">
+        <span class="rangetxt" id="txt-interval">2000 毫秒</span>
+      </div>
+      <div class="row">
+        <div class="label">视频分数聚合</div>
+        <select data-key="scan.video.aggregate">
+          <option value="max" selected>取最高帧（推荐）</option>
+          <option value="top3_mean">前三帧均值（更稳）</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="note">抽帧越密越不易漏，但耗时接近线性增长。实测：从 500ms 调到 100ms，同一批素材耗时涨到
+    <b>3.8 倍</b>，命中数只从 38 增加到 40。婴幼儿视频建议用 <b>500~1000ms</b>；
+    只在个别短视频上追求不漏时才调到 200ms 以下。</div>
+  <div class="row" style="margin-top:12px">
+    <div class="label">跳过缩略图<span class="hint">大幅节省时间</span></div>
+    <input type="text" id="thumb-pat" value="_thumb" placeholder="留空则不过滤"
+           style="max-width:260px" oninput="syncExclude()">
+    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;color:#6B6B66">
+      <input type="checkbox" id="thumb-on" checked onchange="syncExclude()"> 启用
+    </label>
+    <span class="hint" style="color:#8A8A82">文件名包含该关键词即跳过，多个用逗号分隔</span>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <div class="label">图片视频配对<span class="hint">最大的提速来源</span></div>
+    <input type="number" min="0" max="100" step="5" style="max-width:90px"
+           data-key="scan.pairing.reuse_min_score" value="70">
+    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;color:#6B6B66">
+      <input type="checkbox" data-key="scan.pairing.enabled" checked> 启用
+    </label>
+    <span class="hint" style="color:#8A8A82">封面图分数达到左侧值时，同名视频直接沿用、不再抽帧</span>
+  </div>
+  <div class="note">微信保存视频时会同时生成一张同名封面图。实测本目录 172 个视频里有
+    <b>154 个</b>存在同名配图，开启后同批素材耗时从 259 秒降到 <b>193 秒</b>。
+    配对的两者会统一按组内最高分归入同一个分档目录，不会被拆开。</div>
+  <div class="note warn" id="thumb-tip" style="display:none"></div>
+</div>
+
+<div class="card">
+  <h2>相似度与归档</h2>
+  <div class="grid2">
+    <div>
+      <div class="row">
+        <div class="label">相似度口径</div>
+        <select data-key="similarity.mapping">
+          <option value="calibrated" selected>校准后（推荐）</option>
+          <option value="raw">原始余弦值</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="label">下界 calib_low</div>
+        <input type="number" step="0.01" min="0" max="1" data-key="similarity.calib_low" value="0.25">
+      </div>
+      <div class="row">
+        <div class="label">上界 calib_high</div>
+        <input type="number" step="0.01" min="0" max="1" data-key="similarity.calib_high" value="0.75">
+      </div>
+    </div>
+    <div>
+      <div class="row">
+        <div class="label">收录门槛<span class="hint">低于此值不归档</span></div>
+        <input type="number" step="1" min="0" max="100" data-key="bins.min_score" value="30">
+      </div>
+      <div class="row">
+        <div class="label">分档宽度</div>
+        <select data-key="bins.width">
+          <option value="10" selected>每 10% 一档</option>
+          <option value="5">每 5% 一档</option>
+          <option value="20">每 20% 一档</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="label">搬运方式</div>
+        <select data-key="archive.mode">
+          <option value="link" selected>硬链接优先（省空间）</option>
+          <option value="copy">完整复制</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <div class="label">文件名格式<span class="hint">保留原文件名便于回溯</span></div>
+    <input type="text" data-key="archive.naming" value="{date}_{time}__s{score}__{stem}{ext}">
+  </div>
+  <div class="note">
+    可用变量：<code>{date}</code> 拍摄日期 · <code>{time}</code> 拍摄时间 · <code>{score}</code> 相似度整数 ·
+    <code>{stem}</code> 原文件名 · <code>{ext}</code> 扩展名。例：<code>{date}_{time}__s{score}{ext}</code>
+  </div>
+</div>
+
+<div class="card">
+  <h2>执行</h2>
+  <div class="btnrow">
+    <button id="btn-estimate">预估工作量</button>
+    <button id="btn-trial" class="primary">试跑 100 个文件</button>
+    <button id="btn-scan" class="primary">开始完整扫描</button>
+    <button id="btn-dry">归档预览</button>
+    <button id="btn-archive" class="primary">执行归档</button>
+    <button id="btn-stop" class="danger" disabled>停止</button>
+    <label style="margin-left:auto;display:flex;align-items:center;gap:5px;cursor:pointer">
+      <input type="checkbox" id="opt-noresume"> 忽略已有进度重扫
+    </label>
+  </div>
+  <div id="estimate" class="note" style="display:none"></div>
+  <div class="bar"><div id="pbar"></div></div>
+  <div class="stat"><span id="stat">就绪</span></div>
+  <div class="logbox" id="log"></div>
+</div>
+
+<div class="card" id="result" style="display:none">
+  <h2>扫描结果</h2>
+  <div class="hist" id="hist"></div>
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th>相似度</th><th>文件</th><th>拍摄时间</th><th>来源</th></tr></thead>
+      <tbody id="toplist"></tbody>
+    </table>
+  </div>
+  <div class="btnrow" style="margin-top:14px">
+    <button id="btn-open-out">打开输出目录</button>
+    <button id="btn-open-csv">打开评分报告 CSV</button>
+  </div>
+</div>
+
+</div>
+
+<div class="mask" id="mask">
+  <div class="modal">
+    <header>选择文件夹</header>
+    <div class="crumb" id="crumb"></div>
+    <div class="dirlist" id="dirlist"></div>
+    <footer>
+      <div class="row"><div class="label" style="width:auto">当前路径</div>
+        <input type="text" id="pickpath"></div>
+      <button id="pick-cancel">取消</button>
+      <button id="pick-ok" class="primary">确定</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+// ---------- 参数读写 ----------
+function setDeep(obj, key, val){
+  const parts = key.split('.'); let cur = obj;
+  for(let i=0;i<parts.length-1;i++){ if(!cur[parts[i]]) cur[parts[i]] = {}; cur = cur[parts[i]]; }
+  cur[parts[parts.length-1]] = val;
+}
+function buildConfig(){
+  const cfg = {
+    paths: {}, model: {det_size:[640,640]}, reference: {},
+    scan: {image:{enabled:true}, video:{}}, similarity: {}, bins: {}, archive: {}, runtime: {},
+  };
+  cfg.scan.exclude_patterns = readExclude();
+  $$('[data-key]').forEach(el=>{
+    const key = el.dataset.key;
+    let val = el.type === 'checkbox' ? el.checked : el.value;
+    if(el.dataset.kind === 'size'){ val = [parseInt(val,10), parseInt(val,10)]; }
+    else if(['runtime.workers','bins.min_score','bins.width','scan.pairing.reuse_min_score','model.intra_op_num_threads'].includes(key)){ val = parseInt(val,10); }
+    else if(['similarity.calib_low','similarity.calib_high'].includes(key)){ val = parseFloat(val); }
+    else if(el.type === 'range'){ val = parseInt(val,10); }
+    setDeep(cfg, key, val);
+  });
+  return cfg;
+}
+// 缩略图过滤：把逗号分隔的输入切成数组，未启用时给空列表表示不过滤
+function readExclude(){
+  if(!document.querySelector('#thumb-on').checked) return [];
+  const raw = document.querySelector('#thumb-pat').value || '';
+  return raw.split(',').map(s=>s.trim()).filter(Boolean);
+}
+function syncExclude(){
+  const list = readExclude();
+  const tip = document.querySelector('#thumb-tip');
+  tip.style.display = list.length ? 'none' : 'block';
+  tip.textContent = '已关闭过滤，缩略图会一并扫描。缩略图通常只有 200~400px，人脸检出率很低，会明显拖慢速度。';
+  return list;
+}
+function pathsOk(){
+  return $('#p-ref').value && $('#p-src').value && $('#p-out').value;
+}
+
+// ---------- 目录选择器 ----------
+let pickTarget = null;
+$$('[data-pick]').forEach(btn=>{
+  btn.onclick = () => { pickTarget = $('#'+btn.dataset.pick);
+    $('#pickpath').value = pickTarget.value || '';
+    $('#mask').classList.add('on'); loadDir($('#pickpath').value); };
+});
+$('#pick-cancel').onclick = () => $('#mask').classList.remove('on');
+$('#mask').onclick = e => { if(e.target.id === 'mask') $('#mask').classList.remove('on'); };
+$('#pick-ok').onclick = () => { pickTarget.value = $('#pickpath').value; $('#mask').classList.remove('on'); };
+
+async function loadDir(path){
+  const r = await fetch('/api/browse?path=' + encodeURIComponent(path || '')).then(x=>x.json());
+  $('#pickpath').value = r.current || '';
+  $('#crumb').textContent = r.current ? r.current : '我的电脑';
+  const box = $('#dirlist'); box.innerHTML = '';
+  if(!r.dirs || r.dirs.length === 0){ box.innerHTML = '<div class="empty">没有子文件夹</div>'; return; }
+  r.dirs.forEach(d=>{
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = '<span class="arrow">&gt;</span><span></span>';
+    div.lastChild.textContent = d.name;
+    div.onclick = () => loadDir(d.path);
+    box.appendChild(div);
+  });
+  if(r.parent){
+    const up = document.createElement('div');
+    up.className = 'item'; up.innerHTML = '<span class="arrow">..</span><span>返回上一级</span>';
+    up.onclick = () => loadDir(r.parent);
+    box.insertBefore(up, box.firstChild);
+  }
+}
+$('#pickpath').addEventListener('keydown', e=>{ if(e.key === 'Enter') $('#pick-ok').click(); });
+
+// ---------- 日志与状态 ----------
+let since = 0, polling = null;
+function appendLines(lines){
+  const box = $('#log');
+  lines.forEach(([seq, ts, text])=>{
+    const el = document.createElement('div');
+    el.innerHTML = '<span class="t">[' + ts + ']</span> ';
+    el.appendChild(document.createTextNode(text));
+    box.appendChild(el);
+  });
+  while(box.childElementCount > 1200) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+}
+// 轮询必须串行：setInterval 不会等上一次 await 结束就发起下一次，
+// 两个并发请求会用同一个 since 取到同一批日志，导致进度行重复出现。
+// 这里用「正在飞行」标志挡掉重入，等价于递归 setTimeout 的效果。
+let pollFlying = false;
+async function poll(){
+  if(pollFlying) return;
+  pollFlying = true;
+  try{
+    const s = await fetch('/api/status?since=' + since).then(x=>x.json());
+    if(s.lines && s.lines.length){ appendLines(s.lines); since = s.seq; }
+    const busy = s.running;
+    $('#btn-stop').disabled = !busy;
+    ['#btn-trial','#btn-scan','#btn-archive','#btn-dry','#btn-estimate'].forEach(b=>$(b).disabled = busy);
+    if(busy){
+      if(s.progress){
+        const p = s.progress, pct = p.total ? Math.round(p.current/p.total*100) : 0;
+        $('#pbar').style.width = pct + '%';
+        $('#stat').textContent = p.phase + ' ' + pct + '%（' + p.current + '/' + p.total + '）　已用时 ' + s.elapsed + ' 秒';
+      } else {
+        $('#stat').textContent = '运行中　已用时 ' + s.elapsed + ' 秒';
+      }
+    } else if(s.task){
+      const okTag = s.exit_code === 0 ? '完成' : '结束（退出码 ' + s.exit_code + '）';
+      $('#stat').textContent = s.task === 'scan' ? '扫描' + okTag : '归档' + okTag;
+      $('#pbar').style.width = '100%';
+      if(s.task === 'scan') loadReport();
+    }
+  }catch(e){}
+  finally{ pollFlying = false; }
+}
+polling = setInterval(poll, 900);
+
+// ---------- 动作 ----------
+function runAction(url, cfg, opts, okMsg){
+  if(!pathsOk()){ alert('请先填写三个目录'); return; }
+  fetch(url, {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({config: cfg, options: opts})})
+    .then(async r=>{ if(!r.ok){ const d = await r.json().catch(()=>({})); throw new Error(d.detail || r.statusText); } return r.json(); })
+    .then(()=>{ $('#log').innerHTML=''; since = 0; $('#pbar').style.width='0%'; $('#stat').textContent = okMsg; })
+    .catch(e=>{ alert('启动失败：' + e.message); });
+}
+$('#btn-trial').onclick = ()=> runAction('/api/scan', buildConfig(), {no_resume: $('#opt-noresume').checked, limit: 100}, '试跑中');
+$('#btn-scan').onclick  = ()=> runAction('/api/scan', buildConfig(), {no_resume: $('#opt-noresume').checked}, '扫描中');
+$('#btn-dry').onclick   = ()=> runAction('/api/archive', buildConfig(), {dry_run: true}, '归档预览中');
+$('#btn-archive').onclick = ()=>{
+  if(!confirm('确认执行归档？将按相似度把文件搬运到输出目录。')) return;
+  runAction('/api/archive', buildConfig(), {}, '归档中');
+};
+$('#btn-stop').onclick = ()=> fetch('/api/stop',{method:'POST'}).then(()=>$('#stat').textContent='正在停止...');
+
+$('#btn-estimate').onclick = async ()=>{
+  if(!$('#p-src').value){ alert('请先选择待整理相册目录'); return; }
+  $('#btn-estimate').disabled = true; $('#btn-estimate').textContent = '统计中...';
+  try{
+    const r = await fetch('/api/inspect',{method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(buildConfig())}).then(x=>x.json());
+    let msg = '图片 ' + r.images + ' 张，视频 ' + r.videos + ' 个'
+      + (r.heics ? '，HEIC ' + r.heics + ' 个（需安装 pillow-heif 才能处理）' : '')
+      + '，共 ' + (r.total_size || (r.total_gb + ' GB')) + '。\n'
+      + (r.skipped_thumbs ? '已跳过 ' + r.skipped_thumbs + ' 个缩略图（关键词：'
+          + (r.exclude_patterns || []).join(' / ') + '）。\n' : '')
+      + '按当前设置需处理约 ' + r.frames_to_scan + ' 个视频帧，' + r.workers + ' 个进程并行。';
+    const box = $('#estimate'); box.textContent = msg; box.style.display = 'block';
+    box.className = r.has_unsupported ? 'note warn' : 'note';
+  }catch(e){ alert('统计失败：' + e.message); }
+  finally{ $('#btn-estimate').disabled = false; $('#btn-estimate').textContent = '预估工作量'; }
+};
+
+// ---------- 结果 ----------
+async function loadReport(){
+  const r = await fetch('/api/report?out=' + encodeURIComponent($('#p-out').value)).then(x=>x.json());
+  if(!r.exists) return;
+  $('#result').style.display = 'block';
+  const max = Math.max(1, ...r.histogram.map(h=>h.count));
+  $('#hist').innerHTML = r.histogram.map(h=>{
+    const active = parseInt(h.bin.split('-')[1],10) > r.min_score;
+    return '<div class="histrow"><span>' + h.bin + '</span>'
+      + '<div style="background:#EDEDEA;border-radius:2px;overflow:hidden">'
+      + '<div class="fill" style="width:' + (h.count/max*100) + '%;background:' + (active?'#378ADD':'#C9C8C2') + '"></div></div>'
+      + '<span style="font-variant-numeric:tabular-nums">' + h.count + '</span></div>';
+  }).join('');
+  $('#toplist').innerHTML = r.top.map(t=>
+    '<tr><td>' + t.score.toFixed(0) + '%<br><span class="tag">' + t.bin + '</span></td>'
+    + '<td class="name" title="' + t.path + '">' + t.name + '</td>'
+    + '<td>' + (t.ts ? t.ts.slice(0,16) : '—') + '</td>'
+    + '<td>' + (t.ts_source || '—') + '</td></tr>').join('');
+}
+// 打开输出目录 / 报告。抽成函数，避免 fetch 嵌套字面量把括号套错——
+// 这种写法一旦多写或少写一个右括号，整个 <script> 都会解析失败，
+// 页面上所有按钮都会失去响应，且浏览器控制台只会给一行定位模糊的报错。
+async function openPath(p){
+  try{
+    await fetch('/api/open', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({path: p}),
+    });
+  }catch(e){ /* 打不开不影响主流程 */ }
+}
+$('#btn-open-out').onclick = ()=> openPath($('#p-out').value + '/dataset');
+$('#btn-open-csv').onclick = ()=> openPath($('#p-out').value + '/scan_report.csv');
+
+// 抽帧间隔数值联动
+const iv = $('[data-fmt="ms"]');
+function syncRange(){ $('#txt-interval').textContent = iv.value + ' 毫秒'; }
+iv.oninput = syncRange; syncRange();
+
+// ---------- 从 config.yaml 载入参数 ----------
+// 界面上的参数默认值写在 HTML 里，但真正的权威来源是 config.yaml。
+// 启动时自动拉一次，改完配置文件点「重新载入」即可同步，不必重启服务。
+function getDeep(obj, key){
+  return key.split('.').reduce((o,k)=> (o==null ? undefined : o[k]), obj);
+}
+function applyConfig(cfg){
+  $$('[data-key]').forEach(el=>{
+    const v = getDeep(cfg, el.dataset.key);
+    // 空值不覆盖：config.yaml 里的三个目录默认为空，不能把用户已选的目录清掉
+    if(v === undefined || v === null || v === '') return;
+    if(el.dataset.kind === 'size'){ el.value = String(Array.isArray(v) ? v[0] : v); }
+    else if(el.type === 'checkbox'){ el.checked = !!v; }
+    else { el.value = v; }
+  });
+  const ex = (cfg.scan && cfg.scan.exclude_patterns) || [];
+  const pat = document.querySelector('#thumb-pat');
+  if(pat){ pat.value = ex.join(','); document.querySelector('#thumb-on').checked = ex.length > 0; syncExclude(); }
+  syncRange();
+}
+async function loadConfig(){
+  const box = document.querySelector('#cfg-state');
+  try{
+    const r = await fetch('/api/config').then(x=>x.json());
+    applyConfig(r.config || {});
+    box.textContent = r.loaded
+      ? '已载入 ' + r.path.replace(/^.*[\\/]/, '')
+      : '未找到 config.yaml，当前显示内置默认值';
+    return r;
+  }catch(e){
+    box.textContent = '配置载入失败：' + e;
+  }
+}
+$('#btn-reload').onclick = ()=> loadConfig();
+loadConfig();
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+# ===== Python 缓存 / 编译产物 =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# ===== 虚拟环境 =====
+.venv/
+venv/
+env/
+ENV/
+
+# ===== 第三方二进制 / 临时下载 =====
+# ffmpeg / ffprobe 体积大，按需自行放入 _vendor/（详见 README 第三章），不入库
+_vendor/
+_vendor_tmp.zip
+
+# ===== 本地产物：扫描与归档输出 =====
+归档输出/
+dataset/
+*.db
+_state.db
+
+# ===== 测试数据（可由脚本重新生成，非必要入库） =====
+_testdata/
+
+# ===== 编辑器 / 系统文件 =====
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ===== WorkBuddy 工程目录 =====
+.workbuddy/
+
+# 说明：绿色版目录「人脸识别归档图形化工具绿色版/」独立于本仓库之外，
+#       作为免安装的发布物通过 GitHub Release 提供，不纳入本仓库版本管理。
