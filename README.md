@@ -44,8 +44,23 @@
 | Python | 3.12（需自行安装依赖，见下方「源码运行」） |
 | 核心依赖 | `insightface` 2.1、`onnxruntime`(CPU)、`opencv-python` 5.0、`fastapi`、`uvicorn`、`numpy`、`Pillow`、`scipy` 等（见 `requirements.txt`） |
 | 人脸识别模型 | `buffalo_l`（RetinaFace + ArcFace，约 281 MB），首次运行自动下载到 `~/.insightface/models/` |
-| ffprobe（可选） | 用于读取视频**真实拍摄时间**；没有也能跑，视频时间会降级为文件修改时间。把 `ffprobe.exe` 放进 `_vendor/` 目录即可，无需安装系统 ffmpeg |
+| ffprobe（可选） | 读取视频**真实拍摄时间**用；没有也能跑（视频时间降级为文件修改时间）。下载与放置见下方「ffprobe 下载与放置」 |
 | 性能参考 | 纯 CPU 推理；12 核机器全量数百文件约 10 分钟量级，超大批量建议分批 |
+
+#### ffprobe 下载与放置（可选，仅影响视频拍摄时间的精确度）
+
+> 本项目**不把 ffmpeg / ffprobe 放进仓库**：单个 `ffprobe.exe` 约 101 MB，超过 GitHub 单文件 100 MB 上传限制；而且程序缺它也能完整运行（仅视频「按真实拍摄时间重命名」会退化为文件修改时间，图片的 EXIF 时间不受影响）。如需视频按真实拍摄时间归档，请自行下载后放入项目目录。
+
+1. **下载**（Windows，二选一）：
+   - gyan.dev 构建（推荐）：<https://www.gyan.dev/ffmpeg/builds/> → 下载 `ffmpeg-*-essentials_build.zip`（内含 `bin/ffprobe.exe`，体积约 30~40 MB）
+   - 官方总入口：<https://ffmpeg.org/download.html> ；或 BtbN 构建：<https://github.com/BtbN/FFmpeg-Builds/releases>
+2. **解压**：得到 `ffmpeg-XXXX-essentials_build/bin/ffprobe.exe`。
+3. **放置**（任选一种，程序都会自动找到）：
+   - 把整个解压后的文件夹拖进项目根目录的 `_vendor/` 下（自动形成 `_vendor/ffmpeg-XXXX-essentials_build/bin/ffprobe.exe`）；
+   - 或只复制 `ffprobe.exe` 到 `_vendor/ffprobe.exe`；
+   - 或在 `config.yaml` 的 `paths.ffprobe_path` 直接填它的绝对路径；
+   - 或安装系统版 ffmpeg 并加入系统 `PATH`。
+4. **验证**：重启 `webui.py` 后，扫描视频若在报告里看到「容器时间」来源即生效；没有也不影响程序运行。
 
 > 💡 **不想装 Python / 依赖？** 直接使用项目附带的**绿色版**（文件夹名 `人脸识别归档图形化工具绿色版/`）：里面自带 Python 运行环境、buffalo_l 模型和启动器，**解压后双击 `启动工具.bat` 即可使用，免安装、免联网**。
 
